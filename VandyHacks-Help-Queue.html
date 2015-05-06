@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<!-- saved from url=(0030)http://mentors.vandyhacks.org/ -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta charset="utf-8">
+<title>VandyHacks Help Queue</title>
+<meta name="description" content="VandyHacks Help Queue">
+<meta name="viewport" content="width=device-width">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css">
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+<script type="text/javascript" src="http://www.parsecdn.com/js/parse-1.3.5.min.js"></script>
+</head>
+<body>
+<div class="container theme-showcase">
+<div class="jumbotron">
+<h1>Help Ticket Queue</h1>
+<p>
+<input id="title" type="text" class="form-control" placeholder="Title">
+<input id="description" type="text" class="form-control" placeholder="Description (be as specific as possible)">
+<input id="contact" type="text" class="form-control" placeholder="Contact Info(Name, What You Look Like, Email, Where You Are In The Building, etc)">
+</p>
+<p>
+<button class="btn btn-lg btn-primary" onclick="makeTicket()">Make Ticket</button>
+</p>
+<div class="alert alert-success" style="display:none" role="alert">
+<strong>Success!</strong> Your request has been made. Refresh to immediately see changes.
+</div>
+<div class="alert alert-warning" style="display:none" role="alert">
+<strong>Whoops</strong> Please fill out all fields.
+</div>
+<div class="alert alert-danger" style="display:none" role="alert">
+<strong>Failure.</strong> Uhm. Something went wrong. Let an organizer know? Thanks.
+</div>
+</div>
+<div class="page-header">
+<h1>Queue <button class="btn btn-med btn-info" onclick="updateQueue()">Refresh</button></h1>
+</div>
+<table class="table">
+<thead>
+<tr>
+<th>Title</th>
+<th>Description</th>
+<th>Contact</th>
+<th></th>
+</tr>
+</thead>
+<tbody id="ticket_container">
+</tbody>
+</table>
+</div>
+<script type="text/javascript">
+	// Parse id's go here
+    Parse.initialize("", "");
+
+	var HelpTicket = Parse.Object.extend("HelpTicket");
+	
+	// Get all the help tickets from Parse
+	function updateQueue() {
+		var query = new Parse.Query(HelpTicket);
+		query.find( {
+			success: function(result) {
+				$("#ticket_container").empty();
+				for (var i = 0; i < result.length; i++) {
+					var obj = result[i];
+					var table_row = "<tr><td>" + obj.get("title") + "</td><td>" 
+												+ obj.get("description") + "</td><td>"
+												+ obj.get("contact") + 
+												"</td>";
+					if (obj.get("claimed"))
+						table_row += "<td>Claimed</td>";
+					else
+						table_row += "<td><button type='button' class='btn btn-md btn-link' id='claim_" + obj.id + "'>Claim</button></td>";
+					
+					table_row += "<td><button type='button' class='btn btn-md btn-link' id='delete_" + obj.id + "'>Delete</button></td></tr>);";
+					
+					$("#ticket_container").append(table_row);
+					
+					// If the user clicks "Claim", set the ticket as claimed
+					$("#claim_" + obj.id).click( handleClaimClick );
+					
+					// If the user clicks "Delete", delete the ticket from parse.
+					$("#delete_" + obj.id).click( handleDeleteClick );
+				}
+			}, 
+			error: function(error) {
+				$(".alert-failure").show();
+			}
+		} );
+	}
+	
+	function makeTicket() {
+		$(".alert-success").hide();
+		$(".alert-warning").hide();
+		$(".alert-failure").hide();
+	
+		var titleVal = $("#title").val();
+		var descripVal = $("#description").val();
+		var contactVal = $("#contact").val();
+		
+		if ( titleVal == "" || descripVal == "" || contactVal == "") {
+			$(".alert-warning").show();
+			return;
+		}
+			
+		var helpTicket = new HelpTicket();
+		  helpTicket.save({title: titleVal, description: descripVal, contact: contactVal, claimed: false}, {
+		  success: function(object) {
+			$(".alert-success").show();
+			$("#title").val("");
+			$("#description").val("");
+			$("#contact").val("");
+			
+		  },
+		  error: function(model, error) {
+			$(".alert-danger").show();
+		  }
+		});
+	}
+	
+	function handleClaimClick (event) {
+		var ticket = new HelpTicket();
+		var target = $(event.target);
+		ticket.id = target.attr('id').split('_')[1];
+		ticket.set("claimed", true);
+		ticket.save(null, {
+			success: function(obj) {
+				alert("Successfully claimed ticket.");
+			},
+			error: function(obj, error) {
+				alert("Error. Could not claim the ticket. Tell an organizer, maybe?");
+			}
+		});
+	}
+	
+	function handleDeleteClick(event) {
+		var ticket = new HelpTicket();
+		var target = $(event.target);
+		ticket.id = target.attr('id').split('_')[1];
+		ticket.destroy({
+			success: function(obj) {
+				alert("Successfully deleted ticket.");
+			},
+			error: function(obj, error) {
+				alert("Error. Could not delete ticket. Tell an organizer, maybe?");
+			}
+		});
+	}
+	
+	updateQueue();
+	setInterval(updateQueue, 15000);
+  </script>
+</body></html>
